@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, Mic, Timer, Play } from 'lucide-react';
+import { Brain, Timer} from 'lucide-react';
 
 function App() {
   const [step, setStep] = useState(1);
