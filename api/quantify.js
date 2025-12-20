@@ -1,10 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(request, response) {
-  // 1. Check for request body
   if (!request.body || !request.body.goal) {
     return response.status(400).json({ error: "Goal is required" });
   }
@@ -12,31 +10,30 @@ export default async function handler(request, response) {
   const userGoal = request.body.goal;
 
   try {
-    // 2. Select the Model (Flash is fast and free)
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // 3. Construct the Prompt (Asking for JSON explicitly)
+    // The Prompt is now a Judge
     const prompt = `
-      You are a productivity expert. The user has a goal: "${userGoal}".
+      You are a strict productivity coach. Analyze this user goal: "${userGoal}".
+
+      Determine if this goal is "Quantified" (Specific, Measurable, Attainable).
       
-      Please return a JSON object (NO markdown formatting, just raw JSON) with:
-      1. "quantified_goal": A specific, measurable version of the goal (max 15 words).
-      2. "time_options": An array of 3 recommended durations in minutes (e.g. [15, 30, 45]).
-      3. "whisper": A short, motivational sentence to whisper to them.
-      
-      Example output format:
+      Examples of BAD goals: "Read book", "Work on project", "Study".
+      Examples of GOOD goals: "Read 10 pages", "Fix the login bug", "Study Chapter 4 for 30 mins".
+
+      Return a JSON object (NO markdown):
       {
-        "quantified_goal": "Read 10 pages of biology textbook",
-        "time_options": [20, 40, 60],
-        "whisper": "Focus on the process, the learning will follow."
+        "is_valid": boolean, // true if quantified, false if vague
+        "feedback": "string", // If false, explain why (friendly tone).
+        "suggestions": ["string", "string", "string"], // If false, give 3 specific variations based on their input.
+        "refined_goal": "string", // If true, just clean up the grammar/capitalization.
+        "whisper": "string", // If true, give a motivational whisper.
+        "time_options": [number, number, number] // If true, suggest times.
       }
     `;
 
-    // 4. Call the API
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
-
-    // 5. Clean the output (Gemini sometimes adds ```json markers)
     const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
     const data = JSON.parse(cleanJson);
 
@@ -44,6 +41,6 @@ export default async function handler(request, response) {
 
   } catch (error) {
     console.error("Gemini Error:", error);
-    return response.status(500).json({ error: "Failed to process goal" });
+    return response.status(500).json({ error: "AI Failed" });
   }
 }
